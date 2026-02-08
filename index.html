@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GazFlow Admin - Distribution Énergie</title>
     
-    <!-- Tailwind CSS CDN pour restaurer le design immédiatement -->
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -47,7 +47,7 @@
           .custom-scrollbar::-webkit-scrollbar { width: 4px; }
           .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
           .custom-scrollbar::-webkit-scrollbar-thumb { @apply bg-emerald-600 rounded-full; }
-          #admin-map { height: 600px; width: 100%; @apply rounded-[32px] shadow-2xl; }
+          #admin-map, #client-map, #driver-map-live { height: 100%; width: 100%; min-height: 400px; @apply rounded-[32px] shadow-2xl; }
           
           .animate-shake {
             animation: shake 0.4s ease-in-out;
@@ -58,7 +58,7 @@
             75% { transform: translateX(5px); }
           }
         }
-        .leaflet-container { font-family: 'Inter', sans-serif !important; z-index: 1; }
+        .leaflet-container { font-family: 'Inter', sans-serif !important; z-index: 1; border-radius: inherit; }
     </style>
     
     <!-- Leaflet JS -->
@@ -66,9 +66,9 @@
 <script type="importmap">
 {
   "imports": {
-    "react/": "https://esm.sh/react@^19.2.4/",
     "react": "https://esm.sh/react@^19.2.4",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
     "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
     "@google/genai": "https://esm.sh/@google/genai@^1.40.0",
     "recharts": "https://esm.sh/recharts@^3.7.0",
