@@ -6,13 +6,8 @@ import {
   ShoppingBag, 
   ChevronRight, 
   Loader2, 
-  LocateFixed, 
   History, 
-  Info,
-  Package,
-  Clock,
-  Truck,
-  CheckCircle,
+  Truck, 
   Banknote,
   Navigation
 } from 'lucide-react';
@@ -24,10 +19,10 @@ interface ClientAppProps {
 
 const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
   const [activeTab, setActiveTab] = useState<'shop' | 'history' | 'tracking'>('shop');
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
-  const [orderHistory, setOrderHistory] = useState<any[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [activeOrder, setActiveOrder] = useState<any>(null);
+  const [orderHistory, setOrderHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [ordering, setOrdering] = useState(false);
   const [userCoords, setUserCoords] = useState<{lat: number, lng: number} | null>(null);
@@ -39,8 +34,8 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
   useEffect(() => {
     fetchData();
     
-    // Suivi Realtime de la commande ET du livreur
-    const orderSub = supabase.channel('client-tracking')
+    // Suivi Realtime des commandes du client
+    const orderSub = supabase.channel('client-orders-realtime')
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
@@ -61,8 +56,8 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
   }, []);
 
   useEffect(() => {
+    // Si une commande est en cours, on écoute les changements de position du livreur en direct
     if (activeOrder && (activeOrder.status === 'IN_PROGRESS' || activeOrder.status === 'ARRIVED')) {
-      // Souscription spécifique au livreur assigné
       const driverSub = supabase.channel(`driver-move-${activeOrder.livreur_id}`)
         .on('postgres_changes', {
           event: 'UPDATE',
@@ -70,19 +65,20 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
           table: 'profiles',
           filter: `id=eq.${activeOrder.livreur_id}`
         }, (payload) => {
+          console.log("Realtime Driver Move:", payload.new.last_location);
           updateMapMarkers(payload.new.last_location);
         })
         .subscribe();
       
       return () => { supabase.removeChannel(driverSub); };
     }
-  }, [activeOrder]);
+  }, [activeOrder?.id, activeOrder?.status]);
 
   useEffect(() => {
-    if (activeOrder && mapContainerRef.current) {
-      setTimeout(() => initMap(), 100);
+    if (activeOrder && activeTab === 'tracking' && mapContainerRef.current) {
+      setTimeout(() => initMap(), 200);
     }
-  }, [activeOrder, activeTab]);
+  }, [activeOrder?.id, activeTab]);
 
   const initMap = () => {
     const L = (window as any).L;
@@ -98,6 +94,8 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
     
     if (activeOrder.livreur?.last_location) {
       updateMapMarkers(activeOrder.livreur.last_location);
+    } else {
+      updateMapMarkers(null);
     }
   };
 
@@ -105,6 +103,7 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
     if (!loc) return null;
     if (typeof loc === 'string') {
       const coords = loc.match(/-?\d+\.?\d*/g);
+      // PostGIS: POINT(lng lat) -> Leaflet: [lat, lng]
       return coords && coords.length >= 2 ? [parseFloat(coords[1]), parseFloat(coords[0])] : null;
     }
     if (loc.coordinates) return [loc.coordinates[1], loc.coordinates[0]];
@@ -145,7 +144,7 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
     }
 
     if (points.length > 0) {
-      mapInstanceRef.current.fitBounds(L.latLngBounds(points), { padding: [40, 40] });
+      mapInstanceRef.current.fitBounds(L.latLngBounds(points), { padding: [50, 50], maxZoom: 16 });
     }
   };
 
@@ -162,7 +161,7 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
         price: item.price,
         description: item.products.description
       })));
-      setSelectedProduct(pricing[1]?.products || pricing[0]?.products);
+      setSelectedProduct(pricing[0]?.products);
     }
     await fetchActiveOrder();
     setLoading(false);
@@ -181,7 +180,7 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
     
     if (data) {
       setActiveOrder(data);
-      setActiveTab('tracking');
+      if (activeTab !== 'tracking') setActiveTab('tracking');
     } else {
       setActiveOrder(null);
       const { data: history } = await supabase
@@ -196,9 +195,6 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
   const handleOrder = async () => {
     if (!selectedProduct) return;
     setOrdering(true);
-    let lat = userCoords?.lat;
-    let lng = userCoords?.lng;
-
     const { error } = await supabase.from('orders').insert({
       client_id: profile.id,
       status: 'PENDING',
@@ -206,8 +202,8 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
       total_amount: (products.find(p => p.id === selectedProduct.id)?.price || 0) + 1000,
       delivery_fee: 1000,
       payment_method: 'CASH',
-      delivery_address: 'Position GPS temps réel',
-      delivery_location: lat && lng ? `SRID=4326;POINT(${lng} ${lat})` : null
+      delivery_address: 'Ma position GPS actuelle',
+      delivery_location: userCoords ? `SRID=4326;POINT(${userCoords.lng} ${userCoords.lat})` : null
     });
 
     if (!error) fetchActiveOrder();
@@ -226,7 +222,7 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
     setOrdering(false);
   };
 
-  if (loading) return <div className="flex h-screen items-center justify-center bg-white"><Loader2 className="animate-spin text-emerald-500" /></div>;
+  if (loading) return <div className="flex h-screen items-center justify-center bg-white"><Loader2 className="animate-spin text-emerald-500" size={32} /></div>;
 
   return (
     <div className="min-h-screen bg-gray-50 flex justify-center">
@@ -255,43 +251,44 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
         <div className="flex-1 overflow-y-auto px-6 py-6 pb-32">
           {activeOrder ? (
             <div className="space-y-6 animate-in fade-in duration-500">
-              <div className="h-64 rounded-[32px] overflow-hidden shadow-inner border border-gray-100 bg-gray-50 relative">
+              <div className="h-72 rounded-[32px] overflow-hidden shadow-inner border border-gray-100 bg-gray-50 relative">
                 <div ref={mapContainerRef} className="w-full h-full" id="client-map" />
               </div>
 
               <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-black text-gray-900">Détails Livraison</h3>
-                  <span className="text-[10px] font-bold text-gray-400"># {activeOrder.id.slice(0,8)}</span>
+                  <h3 className="font-black text-gray-900 uppercase text-xs tracking-widest">Informations Trajet</h3>
+                  <span className="text-[10px] font-bold text-gray-400">#{activeOrder.id.slice(0,8)}</span>
                 </div>
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+                  <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 shadow-sm">
                     <Truck size={24} />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-gray-900">{activeOrder.livreur?.full_name || 'En attente...'}</p>
-                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Votre livreur GazFlow</p>
+                    <p className="text-sm font-bold text-gray-900">{activeOrder.livreur?.full_name || 'Attribution livreur...'}</p>
+                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Votre expert GazFlow est en route</p>
                   </div>
                 </div>
               </div>
 
               {activeOrder.status === 'ARRIVED' && (
-                <div className="bg-emerald-50 p-6 rounded-[32px] border border-emerald-100 text-center animate-bounce">
+                <div className="bg-emerald-50 p-6 rounded-[32px] border border-emerald-100 text-center animate-bounce shadow-lg">
                   <Banknote size={32} className="mx-auto text-emerald-600 mb-2" />
-                  <p className="text-sm font-black text-emerald-900">Livreur arrivé ! Payez {activeOrder.total_amount.toLocaleString()} F</p>
-                  <button onClick={approveDelivery} className="mt-4 w-full bg-emerald-600 text-white py-4 rounded-2xl font-black">Valider la réception</button>
+                  <p className="text-sm font-black text-emerald-900">Le livreur est devant chez vous !</p>
+                  <p className="text-lg font-black text-emerald-600 mt-1">{activeOrder.total_amount.toLocaleString()} F à payer</p>
+                  <button onClick={approveDelivery} className="mt-4 w-full bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-lg">Confirmer la réception</button>
                 </div>
               )}
             </div>
           ) : activeTab === 'shop' ? (
             <div className="space-y-6">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Choisir mon gaz</p>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Gamme disponible</p>
               {products.map((p) => (
                 <button key={p.id} onClick={() => setSelectedProduct(p)} className={`w-full p-6 rounded-[32px] border-2 transition-all text-left flex items-center gap-6 ${selectedProduct?.id === p.id ? 'border-emerald-600 bg-emerald-50' : 'border-gray-100 bg-white'}`}>
-                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center font-black text-xl ${selectedProduct?.id === p.id ? 'bg-emerald-600 text-white' : 'bg-gray-50 text-gray-400'}`}>{p.size}</div>
+                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center font-black text-xl ${selectedProduct?.id === p.id ? 'bg-emerald-600 text-white shadow-lg' : 'bg-gray-50 text-gray-400'}`}>{p.size}</div>
                   <div className="flex-1">
                     <p className="font-black text-gray-900">Bouteille {p.size}kg</p>
-                    <p className="font-black text-emerald-600">{p.price.toLocaleString()} F</p>
+                    <p className="font-black text-emerald-600 text-lg">{p.price.toLocaleString()} F</p>
                   </div>
                 </button>
               ))}
@@ -301,7 +298,7 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
               {orderHistory.map((order) => (
                 <div key={order.id} className="bg-white p-5 rounded-[24px] border border-gray-100 flex justify-between items-center shadow-sm">
                   <div>
-                    <p className="font-bold text-gray-900">Commande {order.status}</p>
+                    <p className="font-bold text-gray-900">Livraison {order.status === 'DELIVERED' ? 'terminée' : order.status}</p>
                     <p className="text-[10px] text-gray-400 uppercase font-black">{new Date(order.created_at).toLocaleDateString()}</p>
                   </div>
                   <p className="font-black text-emerald-600">{order.total_amount.toLocaleString()} F</p>
@@ -312,10 +309,11 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
         </div>
 
         {activeTab === 'shop' && !activeOrder && (
-          <div className="fixed bottom-0 left-0 right-0 p-6 bg-white border-t border-gray-100 max-w-md mx-auto z-30">
-            <button onClick={handleOrder} disabled={ordering} className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black text-lg flex items-center justify-center gap-3">
+          <div className="fixed bottom-0 left-0 right-0 p-6 bg-white border-t border-gray-100 max-w-md mx-auto z-30 shadow-2xl">
+            <button onClick={handleOrder} disabled={ordering || !userCoords} className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black text-lg flex items-center justify-center gap-3 shadow-xl shadow-emerald-100 disabled:opacity-50">
               {ordering ? <Loader2 className="animate-spin" /> : <>Commander maintenant <ChevronRight size={20} /></>}
             </button>
+            {!userCoords && <p className="text-[10px] text-center mt-2 font-bold text-red-500 uppercase tracking-tighter">Veuillez activer votre GPS pour commander</p>}
           </div>
         )}
       </div>
