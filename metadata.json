@@ -1,0 +1,7 @@
+{
+  "name": "GazFlow Admin Dashboard",
+  "description": "Système de gestion SaaS complet pour la distribution de bouteilles de gaz en Afrique de l'Ouest. Gère les stocks, les livreurs, les paiements Mobile Money et l'analyse prédictive via IA.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
