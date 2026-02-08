@@ -56,7 +56,6 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
 
   const fetchData = async () => {
     setLoading(true);
-    // Fetch Products
     const { data: pricing } = await supabase
       .from('regional_pricing')
       .select(`price, products (id, size, description)`);
@@ -91,7 +90,6 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
       setActiveTab('tracking');
     } else {
       setActiveOrder(null);
-      // Fetch History if no active order
       const { data: history } = await supabase
         .from('orders')
         .select('*')
@@ -156,50 +154,52 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
   if (loading) return <div className="flex h-screen items-center justify-center bg-gray-50"><Loader2 className="animate-spin text-emerald-500" /></div>;
 
   return (
-    <div className="flex justify-center items-center py-10 bg-gray-100 min-h-screen">
-      <div className="w-[375px] h-[812px] bg-white rounded-[40px] shadow-2xl border-[8px] border-gray-900 overflow-hidden relative flex flex-col">
-        
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="max-w-2xl mx-auto w-full bg-white min-h-screen flex flex-col shadow-sm relative">
         {/* Header */}
-        <div className="p-6 pb-2">
+        <div className="p-6 pb-2 border-b bg-white sticky top-0 z-10">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
                <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 font-black">G</div>
                <span className="font-black text-gray-900">GazFlow</span>
             </div>
             {activeOrder && (
-              <div className="animate-pulse bg-emerald-500 w-3 h-3 rounded-full"></div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Suivi actif</span>
+                <div className="animate-pulse bg-emerald-500 w-3 h-3 rounded-full"></div>
+              </div>
             )}
           </div>
+
+          {/* Navigation Tabs */}
+          {!activeOrder && (
+            <div className="flex">
+              <button 
+                onClick={() => setActiveTab('shop')}
+                className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === 'shop' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400'}`}
+              >
+                Boutique
+              </button>
+              <button 
+                onClick={() => setActiveTab('history')}
+                className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === 'history' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400'}`}
+              >
+                Historique
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Navigation Tabs */}
-        {!activeOrder && (
-          <div className="flex px-6 mb-4">
-            <button 
-              onClick={() => setActiveTab('shop')}
-              className={`flex-1 py-2 text-sm font-bold border-b-2 transition-all ${activeTab === 'shop' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400'}`}
-            >
-              Boutique
-            </button>
-            <button 
-              onClick={() => setActiveTab('history')}
-              className={`flex-1 py-2 text-sm font-bold border-b-2 transition-all ${activeTab === 'history' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400'}`}
-            >
-              Historique
-            </button>
-          </div>
-        )}
-
-        <div className="flex-1 overflow-y-auto custom-scrollbar px-6 pb-24">
+        <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-6 pb-32">
           {activeOrder ? (
-            <div className="space-y-8 py-4 animate-in fade-in duration-500">
+            <div className="space-y-8 animate-in fade-in duration-500">
               <div className="text-center">
                 <h3 className="text-xl font-black text-gray-900">Suivi de livraison</h3>
                 <p className="text-xs text-gray-500 font-bold uppercase mt-1">Commande #{activeOrder.id.slice(0, 8)}</p>
               </div>
 
               {/* Progress Stepper Visual */}
-              <div className="relative pt-4 pb-12">
+              <div className="relative pt-4 pb-12 max-w-sm mx-auto">
                 <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-100 ml-[-1px]"></div>
                 <div 
                   className="absolute left-4 top-0 w-0.5 bg-emerald-500 ml-[-1px] transition-all duration-1000" 
@@ -219,7 +219,6 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 shadow-sm border-4 border-white transition-colors ${
                           isDone ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-400'
                         }`}>
-                          {/* Use React.cloneElement with React.ReactElement<any> to avoid TS error on 'size' property */}
                           {React.cloneElement(step.icon as React.ReactElement<any>, { size: 14 })}
                         </div>
                         <div>
@@ -234,22 +233,22 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
 
               {/* Action Box */}
               {activeOrder.status === 'ARRIVED' ? (
-                <div className="bg-emerald-50 p-6 rounded-[32px] border border-emerald-100 text-center animate-bounce-slow">
+                <div className="bg-emerald-50 p-8 rounded-[32px] border border-emerald-100 text-center animate-bounce-slow max-w-sm mx-auto">
                   <Banknote size={40} className="mx-auto text-emerald-600 mb-3" />
                   <h4 className="font-black text-emerald-900">Le livreur est là !</h4>
-                  <p className="text-[11px] text-emerald-700 font-medium mb-6">
+                  <p className="text-sm text-emerald-700 font-medium mb-6">
                     Veuillez lui remettre <b>{activeOrder.total_amount} F CFA</b> en espèces puis confirmez ici.
                   </p>
                   <button 
                     onClick={approveDelivery}
                     disabled={ordering}
-                    className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-emerald-200"
+                    className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-emerald-200 active:scale-95 transition-all"
                   >
                     {ordering ? <Loader2 className="animate-spin mx-auto" /> : "Confirmer la réception"}
                   </button>
                 </div>
               ) : (
-                <div className="bg-gray-50 p-6 rounded-[32px] border border-gray-100 flex items-center gap-4">
+                <div className="bg-gray-50 p-6 rounded-[32px] border border-gray-100 flex items-center gap-4 max-w-sm mx-auto">
                   <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm">
                     <Clock size={24} />
                   </div>
@@ -268,27 +267,27 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
                   <button
                     key={p.id}
                     onClick={() => setSelectedProduct(p)}
-                    className={`w-full group p-4 rounded-3xl border-2 transition-all text-left flex items-center gap-4 ${
-                      selectedProduct?.id === p.id ? 'border-emerald-600 bg-emerald-50' : 'border-gray-100 bg-white'
+                    className={`w-full group p-5 rounded-[32px] border-2 transition-all text-left flex items-center gap-5 ${
+                      selectedProduct?.id === p.id ? 'border-emerald-600 bg-emerald-50 shadow-md' : 'border-gray-100 bg-white'
                     }`}
                   >
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg shadow-sm transition-colors ${
+                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center font-black text-xl shadow-sm transition-colors ${
                       selectedProduct?.id === p.id ? 'bg-emerald-600 text-white' : 'bg-gray-50 text-gray-400'
                     }`}>
                       {p.size}
                     </div>
                     <div className="flex-1">
-                      <p className="font-black text-gray-900">Bouteille {p.size}kg</p>
-                      <p className="text-[10px] text-gray-500 font-medium leading-tight">{p.description}</p>
-                      <p className="mt-1 font-black text-emerald-600">{p.price} F CFA</p>
+                      <p className="font-black text-gray-900 text-lg">Bouteille {p.size}kg</p>
+                      <p className="text-xs text-gray-500 font-medium leading-tight">{p.description}</p>
+                      <p className="mt-1 font-black text-emerald-600 text-lg">{p.price.toLocaleString()} F CFA</p>
                     </div>
                   </button>
                 ))}
               </div>
               
-              <div className="bg-blue-50 p-5 rounded-3xl border border-blue-100 flex items-start gap-4">
-                <Banknote size={20} className="text-blue-500 shrink-0 mt-1" />
-                <p className="text-[11px] text-blue-800 font-bold leading-relaxed italic">
+              <div className="bg-blue-50 p-6 rounded-[32px] border border-blue-100 flex items-start gap-4">
+                <Banknote size={24} className="text-blue-500 shrink-0 mt-1" />
+                <p className="text-xs text-blue-800 font-bold leading-relaxed italic">
                   "Paiement uniquement en espèces à la livraison. Vous ne validez que lorsque vous recevez votre gaz."
                 </p>
               </div>
@@ -296,32 +295,38 @@ const ClientApp: React.FC<ClientAppProps> = ({ profile }) => {
           ) : (
             <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
               {orderHistory.map((order) => (
-                <div key={order.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-emerald-500">
-                    <Package size={20} />
+                <div key={order.id} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center text-emerald-500">
+                    <Package size={24} />
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between">
-                      <p className="font-bold text-gray-900 text-sm">Recharge {order.items?.[0]?.product_id === 1 ? '6kg' : '12.5kg'}</p>
-                      <p className="font-black text-xs text-gray-900">{order.total_amount} F</p>
+                      <p className="font-bold text-gray-900">Recharge {order.items?.[0]?.product_id === 1 ? '6kg' : '12.5kg'}</p>
+                      <p className="font-black text-gray-900">{order.total_amount.toLocaleString()} F</p>
                     </div>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">
+                    <p className="text-[10px] text-gray-400 font-black uppercase mt-1 tracking-widest">
                       {new Date(order.created_at).toLocaleDateString()} • {order.status}
                     </p>
                   </div>
                 </div>
               ))}
+              {orderHistory.length === 0 && (
+                <div className="text-center py-20 opacity-20">
+                  <ShoppingBag size={48} className="mx-auto mb-4" />
+                  <p className="font-black uppercase tracking-widest text-xs">Aucune commande passée</p>
+                </div>
+              )}
             </div>
           )}
         </div>
 
         {/* Action Bar Shopping */}
         {activeTab === 'shop' && !activeOrder && (
-          <div className="absolute bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-lg border-t border-gray-100">
+          <div className="sticky bottom-0 left-0 right-0 p-6 bg-white border-t border-gray-100 shadow-[0_-10px_20px_rgba(0,0,0,0.05)]">
             <button
               onClick={handleOrder}
               disabled={ordering || !selectedProduct}
-              className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl shadow-emerald-100 active:scale-95 transition-all disabled:bg-gray-300"
+              className="w-full max-w-md mx-auto bg-emerald-600 text-white py-5 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl shadow-emerald-100 active:scale-95 transition-all disabled:bg-gray-300 flex"
             >
               {ordering ? <Loader2 className="animate-spin" /> : <>Confirmer la commande <ChevronRight size={18} /></>}
             </button>

@@ -36,11 +36,9 @@ const LivreurApp: React.FC<LivreurAppProps> = ({ profile }) => {
   const mapInstanceRef = useRef<any>(null);
   const markersLayerRef = useRef<any>(null);
 
-  // Séparation des commandes par état
   const activeMissions = useMemo(() => orders.filter(o => o.status !== 'DELIVERED' && o.status !== 'CANCELLED'), [orders]);
   const completedMissions = useMemo(() => orders.filter(o => o.status === 'DELIVERED'), [orders]);
 
-  // Calcul des gains du jour
   const todayEarnings = useMemo(() => {
     const today = new Date().toDateString();
     return completedMissions
@@ -201,11 +199,10 @@ const LivreurApp: React.FC<LivreurAppProps> = ({ profile }) => {
       .update({ status: status, livreur_id: profile.id })
       .eq('id', orderId);
     
-    // Si la commande est livrée, on crédite le livreur (simulation de commission)
     if (!error && status === OrderStatus.DELIVERED) {
       const { data: currentProfile } = await supabase.from('profiles').select('wallet_balance').eq('id', profile.id).single();
       if (currentProfile) {
-        const newBalance = (currentProfile.wallet_balance || 0) + 1000; // 1000 F par livraison
+        const newBalance = (currentProfile.wallet_balance || 0) + 1000;
         await supabase.from('profiles').update({ wallet_balance: newBalance }).eq('id', profile.id);
       }
     }
@@ -217,13 +214,13 @@ const LivreurApp: React.FC<LivreurAppProps> = ({ profile }) => {
   };
 
   return (
-    <div className="flex justify-center items-center py-10 bg-gray-100 min-h-screen">
-      <div className="w-[375px] h-[812px] bg-gray-50 rounded-[40px] shadow-2xl border-[8px] border-gray-900 overflow-hidden relative flex flex-col font-sans">
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+      <div className="max-w-2xl mx-auto w-full bg-gray-50 min-h-screen flex flex-col shadow-sm relative font-sans">
         
         {/* Header */}
-        <div className="bg-white px-6 pt-12 pb-4 border-b flex justify-between items-center z-20">
+        <div className="bg-white px-6 pt-12 pb-4 border-b flex justify-between items-center z-20 sticky top-0">
           <div>
-            <h2 className="text-lg font-black text-gray-900 tracking-tight">GazFlow Drive</h2>
+            <h2 className="text-xl font-black text-gray-900 tracking-tight">GazFlow Drive</h2>
             <div className="flex items-center gap-1.5 mt-0.5">
               <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-gray-300'}`} />
               <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
@@ -235,17 +232,16 @@ const LivreurApp: React.FC<LivreurAppProps> = ({ profile }) => {
             const next = !isOnline;
             setIsOnline(next);
             await supabase.from('profiles').update({ is_online: next }).eq('id', profile.id);
-          }} className={`w-12 h-6 rounded-full p-1 transition-all ${isOnline ? 'bg-emerald-500' : 'bg-gray-200'}`}>
-            <div className={`w-4 h-4 bg-white rounded-full shadow-md transition-transform transform ${isOnline ? 'translate-x-6' : 'translate-x-0'}`} />
+          }} className={`w-14 h-7 rounded-full p-1 transition-all ${isOnline ? 'bg-emerald-500' : 'bg-gray-200'}`}>
+            <div className={`w-5 h-5 bg-white rounded-full shadow-md transition-transform transform ${isOnline ? 'translate-x-7' : 'translate-x-0'}`} />
           </button>
         </div>
 
-        <div className="flex-1 relative overflow-hidden bg-gray-50 flex flex-col">
+        <div className="flex-1 relative overflow-hidden flex flex-col">
           {activeTab === 'carte' ? (
-            <div className="w-full h-full relative">
-              <div ref={mapContainerRef} className="w-full h-full z-0" style={{ height: '100%' }} />
+            <div className="flex-1 w-full relative h-[calc(100vh-160px)]">
+              <div ref={mapContainerRef} className="w-full h-full z-0" />
               
-              {/* Floating UI on Map */}
               <div className="absolute top-4 left-4 right-4 z-10">
                 {activeMissions.find(o => ['ASSIGNED', 'IN_PROGRESS'].includes(o.status)) ? (
                   <div className="bg-white/95 backdrop-blur-md p-4 rounded-3xl shadow-xl border border-blue-100 flex items-center gap-4">
@@ -265,7 +261,6 @@ const LivreurApp: React.FC<LivreurAppProps> = ({ profile }) => {
                 )}
               </div>
 
-              {/* Recenter Button */}
               <button 
                 onClick={recenterMap}
                 className="absolute bottom-6 right-6 z-10 w-14 h-14 bg-white rounded-2xl shadow-xl flex items-center justify-center text-gray-900 border border-gray-100 active:scale-90 transition-all"
@@ -274,23 +269,23 @@ const LivreurApp: React.FC<LivreurAppProps> = ({ profile }) => {
               </button>
             </div>
           ) : activeTab === 'revenus' ? (
-             <div className="flex-1 overflow-y-auto p-6 space-y-6 animate-in fade-in duration-500">
-                <div className="bg-emerald-600 p-8 rounded-[40px] text-white shadow-xl shadow-emerald-100 relative overflow-hidden">
+             <div className="flex-1 overflow-y-auto p-6 space-y-6 animate-in fade-in duration-500 pb-24">
+                <div className="bg-emerald-600 p-10 rounded-[40px] text-white shadow-xl shadow-emerald-100 relative overflow-hidden">
                    <div className="relative z-10">
                       <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Solde Portefeuille</p>
                       <h3 className="text-4xl font-black mt-1">{walletBalance.toLocaleString()} F</h3>
-                      <div className="mt-8 flex gap-4">
-                        <div className="bg-white/10 px-4 py-3 rounded-2xl backdrop-blur-sm">
+                      <div className="mt-10 flex gap-6">
+                        <div className="bg-white/10 px-5 py-4 rounded-2xl backdrop-blur-sm flex-1">
                            <p className="text-[9px] font-black uppercase opacity-60">Aujourd'hui</p>
-                           <p className="font-bold">+{todayEarnings} F</p>
+                           <p className="font-bold text-lg">+{todayEarnings.toLocaleString()} F</p>
                         </div>
-                        <div className="bg-white/10 px-4 py-3 rounded-2xl backdrop-blur-sm">
+                        <div className="bg-white/10 px-5 py-4 rounded-2xl backdrop-blur-sm flex-1">
                            <p className="text-[9px] font-black uppercase opacity-60">Livraisons</p>
-                           <p className="font-bold">{completedMissions.length}</p>
+                           <p className="font-bold text-lg">{completedMissions.length}</p>
                         </div>
                       </div>
                    </div>
-                   <div className="absolute top-[-20px] right-[-20px] w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+                   <div className="absolute top-[-20px] right-[-20px] w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
                 </div>
 
                 <div className="space-y-4">
@@ -299,17 +294,17 @@ const LivreurApp: React.FC<LivreurAppProps> = ({ profile }) => {
                      Derniers Gains
                    </h4>
                    {completedMissions.map(o => (
-                     <div key={o.id} className="bg-white p-5 rounded-3xl border border-gray-100 flex justify-between items-center shadow-sm">
+                     <div key={o.id} className="bg-white p-6 rounded-[32px] border border-gray-100 flex justify-between items-center shadow-sm">
                         <div className="flex items-center gap-4">
-                           <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
-                             <CheckCircle2 size={20} />
+                           <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
+                             <CheckCircle2 size={24} />
                            </div>
                            <div>
                               <p className="text-sm font-bold text-gray-900">Livraison #{o.id.slice(0,5)}</p>
-                              <p className="text-[10px] font-black text-gray-400 uppercase">{new Date(o.updated_at).toLocaleDateString()}</p>
+                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{new Date(o.updated_at).toLocaleDateString()}</p>
                            </div>
                         </div>
-                        <p className="font-black text-emerald-600">+1 000 F</p>
+                        <p className="font-black text-emerald-600 text-lg">+1 000 F</p>
                      </div>
                    ))}
                    {completedMissions.length === 0 && (
@@ -321,72 +316,72 @@ const LivreurApp: React.FC<LivreurAppProps> = ({ profile }) => {
                 </div>
              </div>
           ) : (
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6 pb-24">
               {!isOnline && (
-                <div className="bg-orange-50 border border-orange-100 p-6 rounded-[32px] flex gap-4 items-start animate-in fade-in">
-                   <div className="p-3 bg-white rounded-2xl text-orange-500 shadow-sm"><AlertCircle size={24}/></div>
+                <div className="bg-orange-50 border border-orange-100 p-8 rounded-[40px] flex gap-5 items-start animate-in fade-in">
+                   <div className="p-4 bg-white rounded-2xl text-orange-500 shadow-sm"><AlertCircle size={28}/></div>
                    <div>
-                     <p className="font-black text-orange-900 text-sm">Mode indisponible</p>
-                     <p className="text-[11px] text-orange-700 leading-tight mt-1">Activez votre disponibilité pour recevoir des missions.</p>
+                     <p className="font-black text-orange-900 text-base">Mode indisponible</p>
+                     <p className="text-xs text-orange-700 leading-tight mt-1.5 font-medium">Activez votre disponibilité pour recevoir des missions.</p>
                    </div>
                 </div>
               )}
 
               {activeMissions.map(order => (
-                <div key={order.id} className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100 group transition-all">
-                   <div className="flex justify-between items-start mb-6">
-                     <div className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${
+                <div key={order.id} className="bg-white rounded-[40px] p-8 shadow-sm border border-gray-100 group transition-all">
+                   <div className="flex justify-between items-start mb-8">
+                     <div className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${
                        order.status === 'PENDING' ? 'bg-orange-100 text-orange-600' : 'bg-blue-600 text-white shadow-sm'
                      }`}>
-                       {order.status === 'PENDING' ? 'Nouvelle' : 'En cours'}
+                       {order.status === 'PENDING' ? 'Nouvelle mission' : 'En cours'}
                      </div>
-                     <span className="font-black text-gray-900 text-xl tracking-tight">{order.total_amount} F</span>
+                     <span className="font-black text-gray-900 text-2xl tracking-tight">{order.total_amount.toLocaleString()} F</span>
                    </div>
 
-                   <div className="space-y-4 mb-8">
-                      <div className="flex items-start gap-4">
-                        <div className="p-2.5 bg-gray-50 rounded-xl text-gray-400"><MapPin size={18}/></div>
+                   <div className="space-y-6 mb-10">
+                      <div className="flex items-start gap-5">
+                        <div className="p-3 bg-gray-50 rounded-xl text-gray-400"><MapPin size={20}/></div>
                         <div>
                           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Client: {order.client?.full_name}</p>
-                          <p className="text-sm font-bold text-gray-900 leading-tight mt-0.5">{order.delivery_address}</p>
+                          <p className="text-base font-bold text-gray-900 leading-tight mt-1">{order.delivery_address}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <div className="p-2.5 bg-emerald-50 rounded-xl text-emerald-600"><Banknote size={18}/></div>
+                      <div className="flex items-center gap-5">
+                        <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600"><Banknote size={20}/></div>
                         <div>
                            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Paiement</p>
-                           <p className="text-sm font-bold text-gray-900">Encaissez {order.total_amount} F cash</p>
+                           <p className="text-base font-bold text-gray-900 mt-1">Encaissez {order.total_amount.toLocaleString()} F cash</p>
                         </div>
                       </div>
                    </div>
 
-                   <div className="flex gap-2">
+                   <div className="flex gap-3">
                      {order.status === 'PENDING' ? (
                         <button 
                           onClick={() => updateOrderStatus(order.id, OrderStatus.ASSIGNED)}
                           disabled={!isOnline}
-                          className="w-full bg-gray-900 text-white py-4 rounded-2xl font-black text-xs active:scale-95 disabled:opacity-30 transition-all shadow-lg"
+                          className="w-full bg-gray-900 text-white py-5 rounded-2xl font-black text-sm active:scale-95 disabled:opacity-30 transition-all shadow-lg"
                         >
                           Accepter la mission
                         </button>
                      ) : order.status === 'ASSIGNED' ? (
                         <button 
                           onClick={() => updateOrderStatus(order.id, OrderStatus.IN_PROGRESS)}
-                          className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-xs shadow-xl shadow-blue-100 active:scale-95 transition-all"
+                          className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-sm shadow-xl shadow-blue-100 active:scale-95 transition-all"
                         >
                           Démarrer le trajet
                         </button>
                      ) : (
-                        <div className="flex gap-2 w-full">
+                        <div className="flex gap-3 w-full">
                            <button 
                               onClick={() => setActiveTab('carte')}
-                              className="flex-1 bg-gray-900 text-white py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 shadow-lg"
+                              className="flex-1 bg-gray-900 text-white py-5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
                            >
-                              <Navigation2 size={16} /> GPS
+                              <Navigation2 size={18} /> GPS
                            </button>
                            <button 
                               onClick={() => updateOrderStatus(order.id, OrderStatus.ARRIVED)}
-                              className="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black text-xs shadow-xl shadow-emerald-100"
+                              className="flex-1 bg-emerald-600 text-white py-5 rounded-2xl font-black text-sm shadow-xl shadow-emerald-100 active:scale-95 transition-all"
                            >
                               Arrivé
                            </button>
@@ -398,29 +393,29 @@ const LivreurApp: React.FC<LivreurAppProps> = ({ profile }) => {
               
               {activeMissions.length === 0 && (
                 <div className="py-20 text-center opacity-30">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <ClipboardList size={32} />
+                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <ClipboardList size={40} />
                   </div>
-                  <p className="font-black uppercase tracking-widest text-xs">Aucune mission active</p>
+                  <p className="font-black uppercase tracking-widest text-sm">Aucune mission active</p>
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {/* Tab Bar */}
-        <div className="bg-white h-24 border-t border-gray-100 flex justify-around items-center px-6 pb-6 shadow-[0_-15px_30px_rgba(0,0,0,0.03)] z-30">
-           <button onClick={() => setActiveTab('missions')} className={`flex flex-col items-center gap-2 transition-all ${activeTab === 'missions' ? 'text-emerald-600' : 'text-gray-300'}`}>
-              <ClipboardList size={22} />
-              <span className="text-[9px] font-black uppercase tracking-widest">Missions</span>
+        {/* Navigation Bottom Bar */}
+        <div className="bg-white h-24 border-t border-gray-100 flex justify-around items-center px-6 pb-6 shadow-[0_-15px_30px_rgba(0,0,0,0.05)] sticky bottom-0 z-30">
+           <button onClick={() => setActiveTab('missions')} className={`flex flex-col items-center gap-2 transition-all ${activeTab === 'missions' ? 'text-emerald-600 scale-110' : 'text-gray-300'}`}>
+              <ClipboardList size={26} />
+              <span className="text-[10px] font-black uppercase tracking-widest">Missions</span>
            </button>
-           <button onClick={() => setActiveTab('carte')} className={`flex flex-col items-center gap-2 transition-all ${activeTab === 'carte' ? 'text-emerald-600' : 'text-gray-300'}`}>
-              <MapIcon size={22} />
-              <span className="text-[9px] font-black uppercase tracking-widest">Carte</span>
+           <button onClick={() => setActiveTab('carte')} className={`flex flex-col items-center gap-2 transition-all ${activeTab === 'carte' ? 'text-emerald-600 scale-110' : 'text-gray-300'}`}>
+              <MapIcon size={26} />
+              <span className="text-[10px] font-black uppercase tracking-widest">Carte</span>
            </button>
-           <button onClick={() => setActiveTab('revenus')} className={`flex flex-col items-center gap-2 transition-all ${activeTab === 'revenus' ? 'text-emerald-600' : 'text-gray-300'}`}>
-              <Wallet size={22} />
-              <span className="text-[9px] font-black uppercase tracking-widest">Revenus</span>
+           <button onClick={() => setActiveTab('revenus')} className={`flex flex-col items-center gap-2 transition-all ${activeTab === 'revenus' ? 'text-emerald-600 scale-110' : 'text-gray-300'}`}>
+              <Wallet size={26} />
+              <span className="text-[10px] font-black uppercase tracking-widest">Revenus</span>
            </button>
         </div>
       </div>
