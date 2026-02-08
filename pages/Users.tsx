@@ -5,7 +5,6 @@ import {
   Users as UsersIcon, 
   Search, 
   Filter, 
-  MoreVertical, 
   ShieldCheck, 
   Truck, 
   User,
@@ -27,7 +26,7 @@ const Users: React.FC = () => {
 
   const fetchProfiles = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('profiles')
       .select('*')
       .order('created_at', { ascending: false });
@@ -44,8 +43,6 @@ const Users: React.FC = () => {
     
     if (!error) {
       setProfiles(profiles.map(p => p.id === userId ? { ...p, role: newRole } : p));
-    } else {
-      alert("Erreur lors de la mise à jour : " + error.message);
     }
   };
 
@@ -62,7 +59,7 @@ const Users: React.FC = () => {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div>
         <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Gestion des Utilisateurs</h2>
-        <p className="text-gray-500 mt-1">Gérez les accès, les rôles et les validations KYC des livreurs.</p>
+        <p className="text-gray-500 mt-1">Gérez les accès et les rôles des utilisateurs.</p>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -70,7 +67,7 @@ const Users: React.FC = () => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input 
             type="text" 
-            placeholder="Rechercher un nom ou email..." 
+            placeholder="Rechercher..." 
             className="w-full bg-white border border-gray-100 rounded-2xl py-3 pl-12 pr-4 text-sm shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -97,7 +94,6 @@ const Users: React.FC = () => {
             <tr className="bg-gray-50 border-b border-gray-100">
               <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Utilisateur</th>
               <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Rôle</th>
-              <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Statut KYC</th>
               <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
             </tr>
           </thead>
@@ -106,11 +102,7 @@ const Users: React.FC = () => {
               <tr key={user.id} className="hover:bg-gray-50 transition-colors group">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <img 
-                      src={user.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`} 
-                      className="w-10 h-10 rounded-xl bg-gray-100"
-                      alt=""
-                    />
+                    <img src={user.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`} className="w-10 h-10 rounded-xl bg-gray-100" alt="" />
                     <div>
                       <p className="font-bold text-gray-900">{user.full_name}</p>
                       <p className="text-xs text-gray-500">{user.email}</p>
@@ -123,40 +115,29 @@ const Users: React.FC = () => {
                     user.role === 'LIVREUR' ? 'bg-orange-50 text-orange-600' :
                     'bg-emerald-50 text-emerald-600'
                   }`}>
-                    {user.role === 'ADMIN' ? <ShieldCheck size={12} /> : 
-                     user.role === 'LIVREUR' ? <Truck size={12} /> : <User size={12} />}
                     {user.role}
                   </span>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    {user.kyc_status === 'VERIFIED' ? (
-                      <CheckCircle2 size={16} className="text-emerald-500" />
-                    ) : user.kyc_status === 'REJECTED' ? (
-                      <XCircle size={16} className="text-red-500" />
-                    ) : (
-                      <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse" />
-                    )}
-                    <span className="text-xs font-bold text-gray-600 uppercase">{user.kyc_status}</span>
-                  </div>
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button 
                       onClick={() => updateUserRole(user.id, 'LIVREUR')}
-                      className="p-2 hover:bg-orange-50 text-orange-600 rounded-lg transition-colors title='Promouvoir Livreur'"
+                      title="Promouvoir Livreur"
+                      className="p-2 hover:bg-orange-50 text-orange-600 rounded-lg transition-colors"
                     >
                       <Truck size={18} />
                     </button>
                     <button 
                       onClick={() => updateUserRole(user.id, 'ADMIN')}
-                      className="p-2 hover:bg-indigo-50 text-indigo-600 rounded-lg transition-colors title='Promouvoir Admin'"
+                      title="Promouvoir Admin"
+                      className="p-2 hover:bg-indigo-50 text-indigo-600 rounded-lg transition-colors"
                     >
                       <ShieldCheck size={18} />
                     </button>
                     <button 
                       onClick={() => updateUserRole(user.id, 'CLIENT')}
-                      className="p-2 hover:bg-emerald-50 text-emerald-600 rounded-lg transition-colors title='Rétrograder Client'"
+                      title="Rétrograder Client"
+                      className="p-2 hover:bg-emerald-50 text-emerald-600 rounded-lg transition-colors"
                     >
                       <User size={18} />
                     </button>
@@ -166,12 +147,6 @@ const Users: React.FC = () => {
             ))}
           </tbody>
         </table>
-        {filteredProfiles.length === 0 && (
-          <div className="py-20 text-center">
-            <UsersIcon size={48} className="mx-auto text-gray-200 mb-4" />
-            <p className="text-gray-400 font-medium">Aucun utilisateur trouvé.</p>
-          </div>
-        )}
       </div>
     </div>
   );
