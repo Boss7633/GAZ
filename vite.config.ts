@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   define: {
-    // On définit explicitement process.env pour éviter les crashs si le code y accède
+    // Garantit que process.env ne fait pas planter l'app si une variable est manquante
     'process.env.API_KEY': JSON.stringify(process.env.API_KEY || ''),
     'process.env': {} 
   },
@@ -14,6 +14,13 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: false
-  }
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'lucide-react', 'recharts'],
+        },
+      },
+    },
+  },
 });
