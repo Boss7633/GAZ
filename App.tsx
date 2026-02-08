@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import ClientApp from './pages/ClientApp';
 import LivreurApp from './pages/LivreurApp';
 import AuthPage from './pages/AuthPage';
+import WelcomePage from './pages/WelcomePage';
 import Users from './pages/Users';
 import DeliveryMap from './pages/DeliveryMap';
 import Orders from './pages/Orders';
@@ -17,27 +18,39 @@ const App: React.FC = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
+    // Check if we are coming from an email confirmation link
+    // Supabase redirects often contain #access_token or similar
+    const hash = window.location.hash;
+    const isEmailConfirm = hash.includes('access_token') && (hash.includes('type=signup') || hash.includes('type=recovery'));
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) fetchProfile(session.user.id);
-      else setLoading(false);
+      if (session) {
+        fetchProfile(session.user.id, isEmailConfirm);
+      } else {
+        setLoading(false);
+      }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
-      if (session) fetchProfile(session.user.id);
-      else {
+      if (session) {
+        // Only show welcome on initial SIGNED_IN event if it looks like a confirmation
+        fetchProfile(session.user.id, event === 'SIGNED_IN' && isEmailConfirm);
+      } else {
         setProfile(null);
         setLoading(false);
+        setShowWelcome(false);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, shouldShowWelcome: boolean = false) => {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -46,15 +59,28 @@ const App: React.FC = () => {
     
     if (data) {
       setProfile(data);
-      if (data.role === 'ADMIN') setActiveTab('dashboard');
-      else if (data.role === 'CLIENT') setActiveTab('client-app');
-      else if (data.role === 'LIVREUR') setActiveTab('driver-app');
+      if (shouldShowWelcome) {
+        setShowWelcome(true);
+      } else {
+        if (data.role === 'ADMIN') setActiveTab('dashboard');
+        else if (data.role === 'CLIENT') setActiveTab('client-app');
+        else if (data.role === 'LIVREUR') setActiveTab('driver-app');
+      }
     }
     setLoading(false);
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+  };
+
+  const handleFinishWelcome = () => {
+    setShowWelcome(false);
+    if (profile) {
+      if (profile.role === 'ADMIN') setActiveTab('dashboard');
+      else if (profile.role === 'CLIENT') setActiveTab('client-app');
+      else if (profile.role === 'LIVREUR') setActiveTab('driver-app');
+    }
   };
 
   const renderAdminContent = () => {
@@ -81,10 +107,15 @@ const App: React.FC = () => {
     return <AuthPage onLogin={() => {}} />;
   }
 
+  // Show Welcome Screen if triggered by email confirmation
+  if (showWelcome) {
+    return <WelcomePage profile={profile} onContinue={handleFinishWelcome} />;
+  }
+
   if (profile.role === 'CLIENT') {
     return (
       <div className="relative">
-        <button onClick={handleLogout} className="fixed top-6 left-6 z-50 bg-white/80 backdrop-blur p-3 rounded-full shadow-lg text-red-500"><LogOut size={20} /></button>
+        <button onClick={handleLogout} className="fixed top-6 left-6 z-50 bg-white/80 backdrop-blur p-3 rounded-full shadow-lg text-red-500 hover:bg-red-50 transition-colors"><LogOut size={20} /></button>
         <ClientApp profile={profile} />
       </div>
     );
@@ -93,7 +124,7 @@ const App: React.FC = () => {
   if (profile.role === 'LIVREUR') {
     return (
       <div className="relative">
-        <button onClick={handleLogout} className="fixed top-6 left-6 z-50 bg-white/80 backdrop-blur p-3 rounded-full shadow-lg text-red-500"><LogOut size={20} /></button>
+        <button onClick={handleLogout} className="fixed top-6 left-6 z-50 bg-white/80 backdrop-blur p-3 rounded-full shadow-lg text-red-500 hover:bg-red-50 transition-colors"><LogOut size={20} /></button>
         <LivreurApp profile={profile} />
       </div>
     );
@@ -106,12 +137,12 @@ const App: React.FC = () => {
         <header className="flex justify-between items-center mb-10">
           <div className="relative w-96 hidden md:block">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input type="text" placeholder="Recherche..." className="w-full bg-white border-none rounded-2xl py-3 pl-12 pr-4 text-sm shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none" />
+            <input type="text" placeholder="Recherche..." className="w-full bg-white border-none rounded-2xl py-3 pl-12 pr-4 text-sm shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none font-medium" />
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="text-sm font-bold text-gray-900">{profile.full_name}</p>
-              <p className="text-xs font-medium text-emerald-600 uppercase tracking-widest">{profile.role}</p>
+              <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">{profile.role}</p>
             </div>
             <img src={profile.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.id}`} alt="Profile" className="w-10 h-10 rounded-xl object-cover ring-2 ring-white shadow-sm" />
           </div>
