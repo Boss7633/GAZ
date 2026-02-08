@@ -2,12 +2,12 @@
 import { GoogleGenAI } from "@google/genai";
 
 export async function getBusinessInsights(dataSummary: string) {
-  // Récupération sécurisée de la clé
-  const apiKey = process?.env?.API_KEY;
+  // On utilise directement la chaîne que Vite va remplacer lors du build
+  const apiKey = process.env.API_KEY;
   
-  if (!apiKey) {
-    console.warn("Gemini API Key missing. Skipping AI insights.");
-    return "L'IA est en attente de configuration (Clé API manquante).";
+  if (!apiKey || apiKey === "") {
+    console.warn("Gemini API Key missing or empty.");
+    return "L'IA est en attente de configuration.";
   }
 
   try {
@@ -22,7 +22,7 @@ export async function getBusinessInsights(dataSummary: string) {
       },
     });
     
-    return response.text || "Impossible de générer des analyses pour le moment.";
+    return response.text || "Impossible de générer des analyses.";
   } catch (error) {
     console.error("Gemini Error:", error);
     return "Erreur lors de la connexion à l'IA d'analyse.";
