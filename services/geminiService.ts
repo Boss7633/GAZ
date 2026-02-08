@@ -2,9 +2,16 @@
 import { GoogleGenAI } from "@google/genai";
 
 export async function getBusinessInsights(dataSummary: string) {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Récupération sécurisée de la clé
+  const apiKey = process?.env?.API_KEY;
   
+  if (!apiKey) {
+    console.warn("Gemini API Key missing. Skipping AI insights.");
+    return "L'IA est en attente de configuration (Clé API manquante).";
+  }
+
   try {
+    const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `Tu es un expert Business Analyst pour une startup de livraison de gaz en Afrique de l'Ouest. 
