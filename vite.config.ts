@@ -4,8 +4,10 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  // base: './' permet de générer des chemins relatifs dans le build final
+  // indispensable pour GitHub Pages qui utilise des sous-dossiers
+  base: './',
   define: {
-    // Garantit que process.env ne fait pas planter l'app si une variable est manquante
     'process.env.API_KEY': JSON.stringify(process.env.API_KEY || ''),
     'process.env': {} 
   },
